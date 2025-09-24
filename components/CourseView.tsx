@@ -10,6 +10,8 @@ import { QuizIcon } from './icons/QuizIcon';
 import PracticeQuizModal from './PracticeQuizModal';
 import CodeEditor from './CodeEditor';
 import { VideoIcon } from './icons/VideoIcon';
+import { DeployIcon } from './icons/DeployIcon';
+import VercelDeployModal from './VercelDeployModal';
 
 interface CourseViewProps {
   day: CourseDay;
@@ -67,6 +69,7 @@ const parseMarkdown = (text: string): string => {
 const CourseView: React.FC<CourseViewProps> = ({ day, course, onComplete, completedDays }) => {
   const [isTutorOpen, setIsTutorOpen] = useState(false);
   const [isPracticeQuizOpen, setIsPracticeQuizOpen] = useState(false);
+  const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
   const [showPointsNotification, setShowPointsNotification] = useState(false);
 
   const handleDownloadNotes = () => {
@@ -150,7 +153,15 @@ const CourseView: React.FC<CourseViewProps> = ({ day, course, onComplete, comple
           >
             Mark as Complete
           </button>
-          {!day.isProject && (
+          {day.isProject ? (
+            <button
+              onClick={() => setIsDeployModalOpen(true)}
+              className="flex items-center justify-center gap-2 bg-slate-100 text-slate-900 font-bold py-3 px-6 rounded-lg hover:bg-white transition duration-300 transform hover:scale-105 w-full sm:w-auto"
+            >
+              <DeployIcon className="w-5 h-5" />
+              Deploy to Vercel
+            </button>
+          ) : (
             <button
               onClick={() => setIsPracticeQuizOpen(true)}
               className="flex items-center justify-center gap-2 bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition duration-300 transform hover:scale-105 w-full sm:w-auto"
@@ -187,6 +198,11 @@ const CourseView: React.FC<CourseViewProps> = ({ day, course, onComplete, comple
         onClose={() => setIsPracticeQuizOpen(false)}
         lessonTopic={day.topic}
         lessonNotes={day.notes}
+      />
+
+      <VercelDeployModal
+        isOpen={isDeployModalOpen}
+        onClose={() => setIsDeployModalOpen(false)}
       />
     </>
   );
