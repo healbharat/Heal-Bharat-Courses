@@ -1,9 +1,9 @@
-
 import React from 'react';
 import type { Course } from '../types';
 import { CodeIcon } from './icons/CodeIcon';
 import { CheckCircleIcon } from './icons/CheckCircleIcon';
 import { QuizIcon } from './icons/QuizIcon';
+import { LockIcon } from './icons/LockIcon';
 
 interface SidebarProps {
   course: Course;
@@ -28,6 +28,7 @@ const Sidebar: React.FC<SidebarProps> = ({ course, selectedDay, onDaySelect, com
             <h1 className="text-xl font-bold text-white">Course Outline</h1>
         </div>
         <button onClick={onClose} className="md:hidden text-slate-400 hover:text-white p-1">
+            {/* FIX: Corrected syntax for viewBox attribute. It had an extra double quote. */}
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
       </div>
@@ -50,21 +51,34 @@ const Sidebar: React.FC<SidebarProps> = ({ course, selectedDay, onDaySelect, com
             <ul>
               {course.structure
                 .filter(day => day.module === moduleName)
-                .map(day => (
-                  <li key={day.day}>
-                    <button
-                      onClick={() => onDaySelect(day.day)}
-                      className={`w-full text-left flex items-center justify-between p-2 rounded-md transition-colors duration-200 ${
-                        selectedDay === day.day
-                          ? 'bg-teal-500/20 text-teal-300'
-                          : 'text-slate-300 hover:bg-slate-700'
-                      }`}
-                    >
-                      <span className="flex-1 text-sm">Day {day.day}: {day.topic}</span>
-                      {completedDays.has(day.day) && <CheckCircleIcon className="w-5 h-5 text-green-400 ml-2 flex-shrink-0" />}
-                    </button>
-                  </li>
-                ))}
+                .map(day => {
+                  const isUnlocked = day.day === 1 || completedDays.has(day.day - 1);
+                  const isCompleted = completedDays.has(day.day);
+
+                  return (
+                    <li key={day.day}>
+                      <button
+                        onClick={() => onDaySelect(day.day)}
+                        disabled={!isUnlocked}
+                        className={`w-full text-left flex items-center justify-between p-2 rounded-md transition-colors duration-200 ${
+                          selectedDay === day.day
+                            ? 'bg-teal-500/20 text-teal-300'
+                            : 'text-slate-300'
+                        } ${
+                          isUnlocked 
+                            ? 'hover:bg-slate-700' 
+                            : 'opacity-50 cursor-not-allowed'
+                        }`}
+                      >
+                        <span className="flex-1 text-sm">Day {day.day}: {day.topic}</span>
+                        {isCompleted 
+                            ? <CheckCircleIcon className="w-5 h-5 text-green-400 ml-2 flex-shrink-0" />
+                            : !isUnlocked && <LockIcon className="w-4 h-4 text-slate-500 ml-2 flex-shrink-0" />
+                        }
+                      </button>
+                    </li>
+                  )
+                })}
             </ul>
           </div>
         ))}

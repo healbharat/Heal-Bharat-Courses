@@ -7,8 +7,6 @@ import { LockIcon } from './icons/LockIcon';
 import { WebDevBadge } from './icons/badges/WebDevBadge';
 import { PythonBadge } from './icons/badges/PythonBadge';
 import { AiBadge } from './icons/badges/AiBadge';
-import { SecurityBadge } from './icons/badges/SecurityBadge';
-import { DataBadge } from './icons/badges/DataBadge';
 import { StarIcon } from './icons/StarIcon';
 
 interface ProfileModalProps {
@@ -24,8 +22,6 @@ const badgeMap: Record<string, React.FC<React.SVGProps<SVGSVGElement>>> = {
   WebDevBadge,
   PythonBadge,
   AiBadge,
-  SecurityBadge,
-  DataBadge,
 };
 
 const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, progressData, points, onViewCertificate }) => {

@@ -1,5 +1,7 @@
 {
   "name": "AI Web Dev Course",
   "description": "An AI-powered online platform for a 30-day web development course. It features AI-generated lessons, notes, challenges, and a final quiz covering HTML, CSS, and JavaScript.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "microphone"
+  ]
 }

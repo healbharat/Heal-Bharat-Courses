@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { GitHubIcon } from './icons/GitHubIcon';
 import { LinkIcon } from './icons/LinkIcon';
@@ -50,7 +49,7 @@ const VercelDeployModal: React.FC<VercelDeployModalProps> = ({ isOpen, onClose }
             <p className="text-sm text-slate-400 mb-2">Importing from GitHub</p>
             <div className="flex items-center gap-3 text-white font-medium">
               <GitHubIcon className="w-5 h-5" />
-              <span>healbharat/Heal-Bharat-Courses</span>
+              <span>ai-learning-platform/Course-Project</span>
               <LinkIcon className="w-4 h-4 text-slate-500" />
               <span className="text-slate-400">main</span>
             </div>
@@ -62,14 +61,14 @@ const VercelDeployModal: React.FC<VercelDeployModalProps> = ({ isOpen, onClose }
             <div className="flex flex-col sm:flex-row items-center border border-slate-800 rounded-lg bg-[#111]">
               <div className="w-full sm:w-auto p-4 flex items-center gap-3 border-b sm:border-b-0 sm:border-r border-slate-800">
                  <div className="w-6 h-6 rounded-full bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500"></div>
-                 <span className="text-white font-medium">Heal Bharat's projects</span>
+                 <span className="text-white font-medium">AI Platform Projects</span>
                  <span className="text-xs font-semibold bg-slate-700 text-slate-300 px-2 py-1 rounded-md">Hobby</span>
                  <ChevronDownIcon className="w-5 h-5 text-slate-400" />
               </div>
               <span className="text-2xl text-slate-700 hidden sm:block">/</span>
               <div className="flex-1 p-4 w-full">
                 <label htmlFor="projectName" className="text-sm text-slate-400 mb-1 block">Project Name</label>
-                <input type="text" id="projectName" defaultValue="heal-bharat-courses-nmzk" className="w-full bg-transparent text-white focus:outline-none" />
+                <input type="text" id="projectName" defaultValue="course-project-nmzk" className="w-full bg-transparent text-white focus:outline-none" />
               </div>
             </div>
           </div>

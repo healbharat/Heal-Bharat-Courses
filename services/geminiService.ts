@@ -45,6 +45,33 @@ export const getTutorResponse = async (lessonContext: string, lessonTopic: strin
   }
 };
 
+/**
+ * Generates a behavioral interview question.
+ * @returns A promise that resolves to a string containing one interview question.
+ */
+export const getInterviewQuestion = async (): Promise<string> => {
+  try {
+    const systemInstruction = `You are a senior hiring manager at a top tech company like Google or Amazon. 
+    Your task is to ask one, and only one, common behavioral interview question. 
+    The question should be open-ended and designed to understand a candidate's past experiences and soft skills.
+    Do not add any preamble like "Here is your question:". Just state the question directly.`;
+
+    const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: "Ask me a behavioral question.",
+        config: {
+            systemInstruction: systemInstruction,
+        }
+    });
+
+    return response.text;
+  } catch (error)    {
+    console.error("Error getting interview question from Gemini:", error);
+    return "Tell me about a time you had a conflict with a coworker and how you resolved it.";
+  }
+};
+
+
 const quizSchema = {
     type: Type.ARRAY,
     items: {

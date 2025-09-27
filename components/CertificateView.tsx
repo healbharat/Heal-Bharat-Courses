@@ -93,7 +93,7 @@ const CertificateView: React.FC<CertificateViewProps> = ({ user, course, onBack 
             </div>
 
             <div className="text-right">
-              <p className="text-sm md:text-base font-bold font-serif text-teal-700 border-b border-slate-400 pb-1">Heal Bharat</p>
+              <p className="text-sm md:text-base font-bold font-serif text-teal-700 border-b border-slate-400 pb-1">AI Learning Platform</p>
               <p className="text-xs text-slate-500 mt-1">Issuing Organization</p>
             </div>
           </div>
