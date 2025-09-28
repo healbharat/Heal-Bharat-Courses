@@ -7,6 +7,7 @@ import { MicIcon } from './icons/MicIcon';
 import { BrainIcon } from './icons/BrainIcon';
 import { BriefcaseIcon } from './icons/BriefcaseIcon';
 import { BookOpenIcon } from './icons/BookOpenIcon';
+import { BotIcon } from './icons/BotIcon';
 
 interface NavItemProps {
   icon: React.FC<React.SVGProps<SVGSVGElement>>;
@@ -46,6 +47,10 @@ const MainSidebar: React.FC<MainSidebarProps> = ({ activeView, setActiveView }) 
     { view: View.INTERNSHIP, label: 'Internship', icon: BriefcaseIcon },
   ];
 
+  const specialItems = [
+    { view: View.AI_CHATBOT, label: 'Tronex AI', icon: BotIcon },
+  ];
+
   return (
     <aside className="w-64 bg-slate-800 p-4 flex-shrink-0 flex flex-col border-r border-slate-700 hidden md:flex">
       <div className="flex items-center gap-3 mb-8 px-2">
@@ -56,6 +61,18 @@ const MainSidebar: React.FC<MainSidebarProps> = ({ activeView, setActiveView }) 
       <nav>
         <ul className="space-y-2">
           {navItems.map((item) => (
+            <NavItem
+              key={item.view}
+              icon={item.icon}
+              label={item.label}
+              isActive={activeView === item.view}
+              onClick={() => setActiveView(item.view)}
+            />
+          ))}
+        </ul>
+        <hr className="my-4 border-slate-700" />
+        <ul className="space-y-2">
+           {specialItems.map((item) => (
             <NavItem
               key={item.view}
               icon={item.icon}

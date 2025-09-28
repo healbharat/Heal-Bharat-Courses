@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { CodingProblem } from '../types';
+import { CheckCircleIcon } from './icons/CheckCircleIcon';
+import { XCircleIcon } from './icons/XCircleIcon';
+import Spinner from './Spinner';
 
 // Add Prism to the window object for TypeScript
 declare global {
@@ -13,6 +16,14 @@ declare global {
 interface CodingSolverViewProps {
   problem: CodingProblem;
   onBack: () => void;
+  onProblemSolved: (problemId: number, difficulty: 'Easy' | 'Medium' | 'Hard') => void;
+}
+
+interface TestResult {
+  inputText: string;
+  output: string;
+  actualOutput: string;
+  status: 'Accepted' | 'Wrong Answer' | 'Runtime Error';
 }
 
 const parseMarkdown = (text: string): string => {
@@ -30,12 +41,14 @@ const DifficultyChip: React.FC<{ difficulty: string }> = ({ difficulty }) => {
     return <span className={`px-2 py-1 text-xs font-semibold rounded-full ${color}`}>{difficulty}</span>
 };
 
-
-const CodingSolverView: React.FC<CodingSolverViewProps> = ({ problem, onBack }) => {
+const CodingSolverView: React.FC<CodingSolverViewProps> = ({ problem, onBack, onProblemSolved }) => {
     const [code, setCode] = useState(problem.starterCode);
-    const [output, setOutput] = useState<string[]>(['Click "Run Code" to see the output.']);
-    const [activeTab, setActiveTab] = useState<'console' | 'tests'>('console');
-    
+    const [activeTab, setActiveTab] = useState<'tests' | 'console'>('tests');
+    const [testResults, setTestResults] = useState<TestResult[] | null>(null);
+    const [consoleOutput, setConsoleOutput] = useState<string[]>([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'success' | 'fail'>('idle');
+
     const codeRef = useRef<HTMLElement>(null);
     const preRef = useRef<HTMLPreElement>(null);
 
@@ -56,57 +69,88 @@ const CodingSolverView: React.FC<CodingSolverViewProps> = ({ problem, onBack }) 
             preRef.current.scrollLeft = scrollLeft;
         }
     };
-
-    const handleRunCode = () => {
-        setOutput(['Running code...']);
-        setActiveTab('console');
-        try {
-            // WARNING: This uses new Function() which can be a security risk.
-            // This is for demonstration in a controlled frontend environment.
-            // A real implementation would use a sandboxed environment or a backend service.
-            const logs: any[] = [];
-            const capturedConsoleLog = (...args: any[]) => {
-                const formattedArgs = args.map(arg => {
-                    if (typeof arg === 'object' && arg !== null) {
-                        return JSON.stringify(arg, null, 2);
-                    }
-                    return String(arg);
-                });
-                logs.push(formattedArgs.join(' '));
-            };
-
-            const functionBody = `
-                const console = { log: capturedConsoleLog };
-                ${code}
-                
-                // Example test case - a real runner would be more robust and dynamic
-                try {
-                    if (typeof twoSum === 'function') {
-                      const result = twoSum([2, 7, 11, 15], 9);
-                      console.log('Test Case 1 ([2,7,11,15], 9) Result:', result);
-                    } else {
-                       console.log("Function 'twoSum' not found. Make sure your function is named correctly.");
-                    }
-                } catch(e) {
-                  console.log('Error running test case:', e.message);
-                }
-            `;
-            
-            new Function(functionBody)();
-
-            if (logs.length > 0) {
-                setOutput(logs);
-            } else {
-                setOutput(['Code executed. No output to console.']);
-            }
-
-        } catch (e: any) {
-            setOutput([`Error: ${e.message}`]);
-        }
-    };
     
-    const handleSubmit = () => {
-      alert('Solution submitted! (This is a demo feature)');
+    const runCodeForAllTestCases = (userCode: string): { results: TestResult[], logs: string[] } => {
+        const logs: string[] = [];
+        const capturedConsoleLog = (...args: any[]) => {
+            logs.push(args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' '));
+        };
+
+        const results = problem.examples.map(example => {
+            try {
+                // This is a simplified and somewhat unsafe runner for demo purposes.
+                // A production environment should use a sandboxed web worker or backend service.
+                const codeToRun = `
+                    const console = { log: capturedConsoleLog };
+                    ${userCode};
+                    return ${problem.functionName}(...JSON.parse('${JSON.stringify(example.input)}'));
+                `;
+
+                let result = new Function(codeToRun)();
+                
+                // Special handling for array results that can be in any order for specific problems (like Two Sum)
+                // And for problems that modify arrays in-place (like Reverse String)
+                if (problem.id === 2) { // Reverse String
+                    // The function modifies the input array, so we check that.
+                    // We need to create a copy for the runner.
+                    let inputCopy = JSON.parse(JSON.stringify(example.input));
+                    const inPlaceRunner = `
+                        const console = { log: capturedConsoleLog };
+                        ${userCode};
+                        let s = ${JSON.stringify(inputCopy[0])};
+                        ${problem.functionName}(s);
+                        return s;
+                    `;
+                    result = new Function(inPlaceRunner)();
+                }
+
+                if (Array.isArray(result) && problem.id === 1) {
+                    result.sort((a,b) => a - b);
+                }
+
+                const actualOutput = JSON.stringify(result ?? 'undefined');
+                
+                // In-place modification check
+                let expectedOutput = example.output;
+
+                // FIX: Explicitly type the `status` variable to prevent it from being widened to `string`.
+                const status: TestResult['status'] = actualOutput === expectedOutput ? 'Accepted' : 'Wrong Answer';
+                
+                return { inputText: example.inputText, output: expectedOutput, actualOutput, status };
+
+            } catch (e: any) {
+                const status: TestResult['status'] = 'Runtime Error';
+                return { inputText: example.inputText, output: example.output, actualOutput: `Error: ${e.message}`, status };
+            }
+        });
+        
+        return { results, logs };
+    };
+
+    const handleRunOrSubmit = (isSubmit: boolean) => {
+        setIsSubmitting(true);
+        setSubmissionStatus('idle');
+        setTestResults(null);
+        setConsoleOutput([]);
+
+        // Simulate a short delay
+        setTimeout(() => {
+            const { results, logs } = runCodeForAllTestCases(code);
+            setTestResults(results);
+            setConsoleOutput(logs.length > 0 ? logs : ["No console output."]);
+            setActiveTab('tests');
+            
+            if(isSubmit) {
+                const allPassed = results.every(r => r.status === 'Accepted');
+                if (allPassed) {
+                    setSubmissionStatus('success');
+                    onProblemSolved(problem.id, problem.difficulty);
+                } else {
+                    setSubmissionStatus('fail');
+                }
+            }
+            setIsSubmitting(false);
+        }, 500);
     };
 
     return (
@@ -131,7 +175,7 @@ const CodingSolverView: React.FC<CodingSolverViewProps> = ({ problem, onBack }) 
                         <div key={index} className="mt-6 bg-slate-900/50 p-4 rounded-lg border border-slate-700">
                             <h3 className="font-semibold text-white">Example {index + 1}:</h3>
                             <div className="mt-2 text-sm font-mono bg-slate-800 p-3 rounded-md">
-                                <p><strong className="text-slate-400">Input:</strong> {ex.input}</p>
+                                <p><strong className="text-slate-400">Input:</strong> {ex.inputText}</p>
                                 <p><strong className="text-slate-400">Output:</strong> {ex.output}</p>
                                 {ex.explanation && <p><strong className="text-slate-400">Explanation:</strong> {ex.explanation}</p>}
                             </div>
@@ -161,18 +205,45 @@ const CodingSolverView: React.FC<CodingSolverViewProps> = ({ problem, onBack }) 
                         </div>
                     </div>
                     <div className="h-48 flex flex-col bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-                        <div className="flex-shrink-0 bg-slate-800 border-b border-slate-700 flex items-center">
-                            <button onClick={() => setActiveTab('console')} className={`font-mono text-sm px-4 py-2 ${activeTab === 'console' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:bg-slate-700/50'}`}>Console</button>
+                        <div className="flex-shrink-0 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
+                            <div className="flex items-center">
+                                <button onClick={() => setActiveTab('tests')} className={`font-mono text-sm px-4 py-2 ${activeTab === 'tests' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:bg-slate-700/50'}`}>Test Cases</button>
+                                <button onClick={() => setActiveTab('console')} className={`font-mono text-sm px-4 py-2 ${activeTab === 'console' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:bg-slate-700/50'}`}>Console</button>
+                            </div>
+                            {submissionStatus === 'success' && <div className="px-4 text-green-400 font-bold text-sm animate-pulse">Solution Accepted!</div>}
+                            {submissionStatus === 'fail' && <div className="px-4 text-red-400 font-bold text-sm">Solution Failed</div>}
                         </div>
-                        <div className="flex-1 overflow-y-auto p-2 font-mono text-xs text-slate-300">
-                            {output.map((line, index) => (
-                                <pre key={index} className={`whitespace-pre-wrap p-1 border-b border-slate-700/50 ${line.toLowerCase().includes('error') ? 'text-red-400' : ''}`}>{line}</pre>
-                            ))}
+                        <div className="flex-1 overflow-y-auto p-2 font-mono text-xs">
+                           {isSubmitting && <div className="flex items-center justify-center h-full"><Spinner /></div>}
+                           {!isSubmitting && activeTab === 'tests' && (
+                            <div className="space-y-2 p-2">
+                                {!testResults && <p className="text-slate-400">Run or submit code to see test case results.</p>}
+                                {testResults?.map((result, i) => (
+                                    <div key={i} className="bg-slate-900/50 p-2 rounded">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            {result.status === 'Accepted' ? <CheckCircleIcon className="w-4 h-4 text-green-400"/> : <XCircleIcon className="w-4 h-4 text-red-400"/>}
+                                            <span className={`font-bold ${result.status === 'Accepted' ? 'text-green-400' : 'text-red-400'}`}>{result.status}</span>
+                                            <span className="text-slate-300 font-semibold ml-auto">Case {i+1}</span>
+                                        </div>
+                                        <div className="pl-6 text-slate-400">
+                                            <p><strong className="text-slate-300">Input:</strong> {result.inputText}</p>
+                                            <p><strong className="text-slate-300">Expected:</strong> {result.output}</p>
+                                            <p><strong className="text-slate-300">Output:</strong> <span className={result.status !== 'Accepted' ? 'text-red-400' : 'text-green-400'}>{result.actualOutput}</span></p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                           )}
+                           {!isSubmitting && activeTab === 'console' && (
+                             <div className="p-2">
+                                {consoleOutput.map((line, i) => <pre key={i} className="whitespace-pre-wrap border-b border-slate-700/50 pb-1 mb-1">{line}</pre>)}
+                             </div>
+                           )}
                         </div>
                     </div>
                      <div className="flex justify-end gap-4 flex-shrink-0">
-                        <button onClick={handleRunCode} className="bg-slate-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-slate-700 transition">Run Code</button>
-                        <button onClick={handleSubmit} className="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 transition">Submit</button>
+                        <button onClick={() => handleRunOrSubmit(false)} disabled={isSubmitting} className="bg-slate-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-slate-700 transition disabled:bg-slate-700/50 disabled:cursor-not-allowed">Run Code</button>
+                        <button onClick={() => handleRunOrSubmit(true)} disabled={isSubmitting} className="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 transition disabled:bg-green-700/50 disabled:cursor-not-allowed">Submit</button>
                     </div>
                 </div>
             </div>

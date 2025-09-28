@@ -1,6 +1,7 @@
 import React from 'react';
 import { LaptopCodeIcon } from './icons/LaptopCodeIcon';
 import { codingProblems } from '../data/codingProblems';
+import { CheckCircleIcon } from './icons/CheckCircleIcon';
 
 const problems = codingProblems; // Use problems from the central data file
 
@@ -15,9 +16,10 @@ const DifficultyChip: React.FC<{ difficulty: string }> = ({ difficulty }) => {
 
 interface CodingPracticeViewProps {
     onSolve: (problemId: number) => void;
+    solvedProblems: Set<number>;
 }
 
-const CodingPracticeView: React.FC<CodingPracticeViewProps> = ({ onSolve }) => {
+const CodingPracticeView: React.FC<CodingPracticeViewProps> = ({ onSolve, solvedProblems }) => {
   return (
     <div className="animate-fade-in">
       <header className="mb-8">
@@ -41,7 +43,12 @@ const CodingPracticeView: React.FC<CodingPracticeViewProps> = ({ onSolve }) => {
           <tbody>
             {problems.map((problem, index) => (
               <tr key={problem.id} className={`border-t border-slate-700 ${index % 2 === 0 ? 'bg-slate-900/20' : ''}`}>
-                <td className="p-4 font-medium text-white">{problem.title}</td>
+                <td className="p-4 font-medium text-white">
+                  <div className="flex items-center gap-2">
+                    {solvedProblems.has(problem.id) && <CheckCircleIcon className="w-5 h-5 text-green-400 flex-shrink-0" />}
+                    <span>{problem.title}</span>
+                  </div>
+                </td>
                 <td className="p-4 text-slate-400 hidden md:table-cell">{problem.category}</td>
                 <td className="p-4"><DifficultyChip difficulty={problem.difficulty} /></td>
                 <td className="p-4 text-right">

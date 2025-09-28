@@ -4,25 +4,23 @@ import { LogoutIcon } from './icons/LogoutIcon';
 import { UserIcon } from './icons/UserIcon';
 import { StarIcon } from './icons/StarIcon';
 import { MenuIcon } from './icons/MenuIcon';
+import { FullScreenIcon } from './icons/FullScreenIcon';
+import { ExitFullScreenIcon } from './icons/ExitFullScreenIcon';
 
 interface HeaderProps {
   user: User;
   onLogout: () => void;
   points: number;
   onOpenProfile: () => void;
-  onToggleSidebar?: () => void;
-  isCourseViewActive?: boolean;
+  isFullScreen: boolean;
+  onToggleFullScreen: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ user, onLogout, points, onOpenProfile, onToggleSidebar, isCourseViewActive }) => {
+const Header: React.FC<HeaderProps> = ({ user, onLogout, points, onOpenProfile, isFullScreen, onToggleFullScreen }) => {
   return (
     <header className="bg-slate-800/50 backdrop-blur-sm border-b border-slate-700 p-3 sm:p-4 flex justify-between items-center flex-shrink-0 z-10">
       <div className="flex items-center gap-2 md:gap-4">
-        {isCourseViewActive && onToggleSidebar && (
-           <button onClick={onToggleSidebar} className="md:hidden text-slate-400 hover:text-white p-2 -ml-2">
-              <MenuIcon className="w-6 h-6" />
-           </button>
-        )}
+        {/* Placeholder for potential mobile sidebar toggle in the future */}
         <h1 className="text-lg md:text-xl font-bold text-white hidden sm:block">{`Welcome, ${user.name}!`}</h1>
       </div>
       <div className="flex items-center gap-2 sm:gap-4">
@@ -31,6 +29,14 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, points, onOpenProfile, 
           <span className="text-sm sm:text-base">{points}</span>
           <span className="hidden sm:inline">Points</span>
         </div>
+        <button
+            onClick={onToggleFullScreen}
+            className="flex items-center gap-2 bg-slate-700 text-slate-300 font-semibold py-2 px-3 sm:px-4 rounded-lg hover:bg-slate-600 transition duration-300"
+            title={isFullScreen ? 'Exit Full Screen' : 'Enter Full Screen'}
+          >
+          {isFullScreen ? <ExitFullScreenIcon className="w-5 h-5" /> : <FullScreenIcon className="w-5 h-5" />}
+          <span className="hidden sm:inline">{isFullScreen ? 'Exit Full' : 'Full Screen'}</span>
+        </button>
         <button
             onClick={onOpenProfile}
             className="flex items-center gap-2 bg-slate-700 text-slate-300 font-semibold py-2 px-3 sm:px-4 rounded-lg hover:bg-slate-600 transition duration-300"

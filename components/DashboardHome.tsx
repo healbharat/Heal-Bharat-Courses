@@ -1,23 +1,15 @@
 import React from 'react';
-import { courses } from '../data/courses';
 import type { User } from '../types';
 import { StarIcon } from './icons/StarIcon';
-import { CheckCircleIcon } from './icons/CheckCircleIcon';
+import { View } from '../types';
 
 interface DashboardHomeProps {
   user: User;
-  progressData: Record<string, Set<number>>;
   points: number;
+  onViewChange: (view: View) => void;
 }
 
-const DashboardHome: React.FC<DashboardHomeProps> = ({ user, progressData, points }) => {
-  const totalCourses = courses.length;
-  const completedCourses = courses.filter(course => {
-    const completedDays = progressData[course.id]?.size || 0;
-    const totalDays = course.structure.length;
-    return totalDays > 0 && completedDays === totalDays;
-  }).length;
-
+const DashboardHome: React.FC<DashboardHomeProps> = ({ user, points, onViewChange }) => {
   return (
     <div className="animate-fade-in space-y-8">
       <header>
@@ -35,35 +27,26 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, progressData, point
             <p className="text-2xl font-bold text-white">{points}</p>
           </div>
         </div>
-        <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700 flex items-center gap-4">
-           <div className="p-3 bg-green-500/10 rounded-full">
-            <CheckCircleIcon className="w-6 h-6 text-green-400" />
-          </div>
-          <div>
-            <p className="text-sm text-slate-400">Courses Completed</p>
-            <p className="text-2xl font-bold text-white">{completedCourses} / {totalCourses}</p>
-          </div>
-        </div>
       </div>
       
        <div>
         <h2 className="text-2xl font-bold text-white mb-4">Quick Access</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <QuickAccessCard title="Explore Courses" description="Learn new skills" />
-            <QuickAccessCard title="Coding Practice" description="Sharpen your logic" />
-            <QuickAccessCard title="Interview Prep" description="Ace your next interview" />
-            <QuickAccessCard title="Internship Status" description="Check your progress" />
+            <QuickAccessCard title="Explore Courses" description="Learn new skills" onClick={() => onViewChange(View.COURSE_SELECTION)} />
+            <QuickAccessCard title="Coding Practice" description="Sharpen your logic" onClick={() => onViewChange(View.CODING_PRACTICE)} />
+            <QuickAccessCard title="Interview Prep" description="Ace your next interview" onClick={() => onViewChange(View.INTERVIEW_PRACTICE)} />
+            <QuickAccessCard title="Internship Status" description="Check your progress" onClick={() => onViewChange(View.INTERNSHIP)} />
         </div>
       </div>
     </div>
   );
 };
 
-const QuickAccessCard: React.FC<{title: string, description: string}> = ({title, description}) => (
-    <div className="bg-slate-800 p-6 rounded-lg border border-slate-700 hover:bg-slate-700/50 hover:border-slate-600 transition-all cursor-pointer">
+const QuickAccessCard: React.FC<{title: string, description: string, onClick: () => void}> = ({title, description, onClick}) => (
+    <button onClick={onClick} className="w-full text-left bg-slate-800 p-6 rounded-lg border border-slate-700 hover:bg-slate-700/50 hover:border-slate-600 transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500">
         <h3 className="font-bold text-white">{title}</h3>
         <p className="text-sm text-slate-400 mt-1">{description}</p>
-    </div>
+    </button>
 );
 
 export default DashboardHome;

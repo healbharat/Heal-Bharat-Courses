@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import type { QuizQuestion } from '../types';
+import type { ChatMessage, CodingProblem } from '../types';
 
 // Ensure the API key is available from environment variables
 if (!process.env.API_KEY) {
@@ -7,43 +7,6 @@ if (!process.env.API_KEY) {
 }
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-/**
- * Gets a response from the AI tutor.
- * @param lessonContext - The notes from the current lesson.
- * @param lessonTopic - The topic of the current lesson.
- * @param question - The user's question.
- * @returns The AI's response as a string.
- */
-export const getTutorResponse = async (lessonContext: string, lessonTopic: string, question: string): Promise<string> => {
-  try {
-    const systemInstruction = `You are an expert AI Tutor. Your student is currently learning about "${lessonTopic}". 
-    Your role is to help them understand the concepts from their lesson. 
-    Use the provided lesson notes as the primary source of truth. 
-    Explain concepts clearly and concisely. Provide simple code examples if relevant. 
-    Be encouraging and supportive. Do not answer questions that are outside the scope of web development, programming, or the current lesson's context.
-    
-    LESSON NOTES:
-    ---
-    ${lessonContext}
-    ---
-    `;
-
-    const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: question,
-        config: {
-            systemInstruction: systemInstruction,
-            thinkingConfig: { thinkingBudget: 0 } // Use low latency for chat
-        }
-    });
-
-    return response.text;
-  } catch (error) {
-    console.error("Error getting response from Gemini:", error);
-    return "I'm sorry, I'm having trouble connecting right now. Please try again later.";
-  }
-};
 
 /**
  * Generates a behavioral interview question.
@@ -71,77 +34,166 @@ export const getInterviewQuestion = async (): Promise<string> => {
   }
 };
 
+/**
+ * Generates a response from the AI chatbot based on conversation history.
+ * @param history An array of ChatMessage objects representing the conversation.
+ * @returns A promise that resolves to the AI's response text.
+ */
+export const getChatbotResponse = async (history: ChatMessage[]): Promise<string> => {
+  try {
+    const systemInstruction = `You are Tronex AI, a helpful and highly intelligent AI assistant specializing in coding and web development. 
+    Your goal is to provide accurate, concise, and easy-to-understand answers to the user's questions. 
+    When providing code snippets, always wrap them in markdown code blocks with the correct language identifier (e.g., \`\`\`javascript).`;
 
-const quizSchema = {
-    type: Type.ARRAY,
-    items: {
-      type: Type.OBJECT,
-      properties: {
-        question: {
-          type: Type.STRING,
-          description: "The quiz question."
-        },
-        options: {
-          type: Type.ARRAY,
-          items: { type: Type.STRING },
-          description: "An array of 4 possible answers."
-        },
-        correctAnswer: {
-          type: Type.STRING,
-          description: "The correct answer, which must be one of the strings in the 'options' array."
+    // FIX: Convert chat history to the format expected by the Gemini API
+    const contents = history.map(msg => ({
+        // The API uses 'model' for the AI's role
+        role: msg.sender === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.text }],
+    }));
+
+    const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: contents,
+        config: {
+            systemInstruction: systemInstruction,
         }
-      },
-      required: ["question", "options", "correctAnswer"]
+    });
+
+    return response.text;
+  } catch (error) {
+    console.error("Error getting chatbot response from Gemini:", error);
+    return "I'm sorry, I encountered an error while processing your request. Please try again.";
+  }
+};
+
+
+/**
+ * Generates a coding challenge based on a course title.
+ * @param courseTitle The title of the course to base the challenge on.
+ * @returns A promise that resolves to a CodingProblem object.
+ */
+export const generateCodingChallenge = async (courseTitle: string): Promise<CodingProblem> => {
+  try {
+    const systemInstruction = `You are an expert programming challenge creator for a web development learning platform. 
+    Your task is to generate a single, relevant coding challenge based on the provided course title.
+    - The difficulty must be 'Easy' or 'Medium'.
+    - The category should be a relevant programming concept (e.g., 'Arrays', 'Strings', 'DOM Manipulation').
+    - The description must be in Markdown format, explaining the problem clearly.
+    - The starterCode must be in JavaScript.
+    - The functionName must match the function in the starterCode.
+    - You must provide 2 examples with inputs and expected string outputs.
+    - IMPORTANT: You must strictly adhere to the provided JSON schema. Your entire response must be only the valid JSON object, with no explanatory text, comments, or markdown formatting around it.`;
+    
+    const responseSchema = {
+        type: Type.OBJECT,
+        properties: {
+            title: { type: Type.STRING },
+            difficulty: { type: Type.STRING, enum: ['Easy', 'Medium'] },
+            category: { type: Type.STRING },
+            description: { type: Type.STRING },
+            starterCode: { type: Type.STRING },
+            functionName: { type: Type.STRING },
+            examples: {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        input: { type: Type.ARRAY, items: { type: Type.STRING } },
+                        inputText: { type: Type.STRING },
+                        output: { type: Type.STRING },
+                        explanation: { type: Type.STRING, nullable: true },
+                    },
+                    required: ['input', 'inputText', 'output'],
+                },
+            },
+        },
+        required: ['title', 'difficulty', 'category', 'description', 'starterCode', 'functionName', 'examples'],
+    };
+
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: `Generate a JSON object for a coding challenge based on the course: "${courseTitle}"`,
+      config: {
+        systemInstruction,
+        responseMimeType: "application/json",
+        responseSchema: responseSchema,
+      }
+    });
+    
+    let jsonString = response.text.trim();
+    
+    // Attempt to find and extract a valid JSON object from the response string,
+    // in case the model wraps it with markdown or other text.
+    const jsonMatch = jsonString.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonString = jsonMatch[0];
+    } else {
+        // If no JSON object is found, the response is invalid.
+        throw new Error("Response did not contain a valid JSON object.");
     }
+
+    const parsedResponse = JSON.parse(jsonString);
+
+    // The Gemini response doesn't conform to our internal CodingProblem shape for examples.input. Let's fix it.
+    // The schema asks for an array of strings, but the real data is any[]. We'll parse the strings.
+    const fixedExamples = parsedResponse.examples.map((ex: any) => ({
+      ...ex,
+      input: ex.input.map((i: string) => {
+        try {
+            return JSON.parse(i)
+        } catch {
+            // if it's already a non-stringified value (e.g. just a string from the input) return as is
+            return i;
+        }
+      }),
+    }));
+    
+    // We need to add an ID for our internal state management
+    const problem: CodingProblem = {
+        ...parsedResponse,
+        id: Date.now(),
+        examples: fixedExamples,
+    };
+    
+    return problem;
+
+  } catch (error) {
+    console.error("Error generating coding challenge from Gemini:", error);
+    if (error instanceof SyntaxError) {
+        console.error("The response from the AI was not valid JSON.");
+    }
+    throw new Error("Failed to generate a coding challenge. The AI may be temporarily unavailable.");
+  }
 };
 
 /**
- * Generates a short practice quiz based on lesson content.
- * @param lessonNotes - The notes from the current lesson.
- * @param lessonTopic - The topic of the current lesson.
- * @returns A promise that resolves to an array of QuizQuestion objects.
+ * Generates a summary and key learning points for a course.
+ * @param courseTitle The title of the course.
+ * @param courseDescription The description of the course.
+ * @returns A promise that resolves to a markdown string with the notes.
  */
-export const generatePracticeQuiz = async (lessonNotes: string, lessonTopic: string): Promise<QuizQuestion[]> => {
-    try {
-        const systemInstruction = `You are an expert quiz designer. Your task is to create a short, 3-question multiple-choice quiz based on the provided lesson notes to help a student test their understanding.
-        
-        RULES:
-        - The questions must be directly related to the content of the lesson notes.
-        - Each question must have exactly 4 plausible options.
-        - One option must be clearly the correct answer based on the notes.
-        - The value for 'correctAnswer' must be an exact match to one of the strings in the 'options' array.
-        - Generate exactly 3 questions.
-        
-        LESSON TOPIC: "${lessonTopic}"
-        
-        LESSON NOTES:
-        ---
-        ${lessonNotes}
-        ---
-        `;
+export const generateCourseNotes = async (courseTitle: string, courseDescription: string): Promise<string> => {
+  try {
+    const systemInstruction = `You are an expert academic assistant. Your task is to generate concise and structured study notes for a given online course.
+    The notes should be in Markdown format.
+    - Start with a brief, one-paragraph summary of the course.
+    - Follow with a bulleted list of "Key Learning Objectives" or "Core Concepts". Use the format '* ' for bullet points.
+    - The tone should be helpful, clear, and encouraging.
+    - Do not include any preamble like "Here are your notes:". Start directly with the summary.`;
 
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: "Generate the 3-question quiz now.",
-            config: {
-                systemInstruction,
-                responseMimeType: "application/json",
-                responseSchema: quizSchema,
-            }
-        });
-        
-        const jsonText = response.text.trim();
-        const quizData = JSON.parse(jsonText);
-        
-        if (!Array.isArray(quizData)) {
-            throw new Error("AI did not return a valid array for the quiz.");
+    const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: `Generate notes for the course titled "${courseTitle}". Course Description: "${courseDescription}"`,
+        config: {
+            systemInstruction: systemInstruction,
         }
-        
-        // Basic validation
-        return quizData.filter(q => q.question && q.options && q.correctAnswer && Array.isArray(q.options) && q.options.includes(q.correctAnswer));
+    });
 
-    } catch (error) {
-        console.error("Error generating practice quiz:", error);
-        throw new Error("Failed to generate a practice quiz. The AI tutor might be busy. Please try again later.");
-    }
+    return response.text;
+  } catch (error)    {
+    console.error("Error generating course notes from Gemini:", error);
+    return "### Error\n\nI was unable to generate notes for this course. The AI service may be temporarily unavailable. Please try again later.";
+  }
 };

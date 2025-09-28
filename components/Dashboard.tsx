@@ -1,12 +1,8 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import Header from './Header';
-import CourseView from './CourseView';
-import QuizView from './QuizView';
 import ProfileModal from './ProfileModal';
-import CertificateView from './CertificateView';
 import CourseSelectionView from './CourseSelectionView';
-import { courses } from '../data/courses';
-import type { User, Course } from '../types';
+import type { User, CodingProblem } from '../types';
 import { View } from '../types';
 import MainSidebar from './MainSidebar';
 import DashboardHome from './DashboardHome';
@@ -14,9 +10,12 @@ import CodingPracticeView from './CodingPracticeView';
 import InterviewPracticeView from './InterviewPracticeView';
 import AptitudePracticeView from './AptitudePracticeView';
 import InternshipView from './InternshipView';
-import Sidebar from './Sidebar'; // This is now the Course-specific sidebar
 import CodingSolverView from './CodingSolverView';
 import { codingProblems } from '../data/codingProblems';
+import { allCompanyCourses, ExternalCourse } from '../data/companyCourses';
+import AiChatbotView from './AiChatbotView';
+import { generateCodingChallenge, generateCourseNotes } from '../services/geminiService';
+import AiNotesModal from './AiNotesModal';
 
 
 interface DashboardProps {
@@ -26,207 +25,211 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [activeView, setActiveView] = useState<View>(View.DASHBOARD_HOME);
-  const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
-  const [selectedProblemId, setSelectedProblemId] = useState<number | null>(null);
-  const [selectedDay, setSelectedDay] = useState<number>(1);
+  const [activeProblem, setActiveProblem] = useState<CodingProblem | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [certificateCourse, setCertificateCourse] = useState<Course | null>(null);
-  const [isCourseSidebarOpen, setIsCourseSidebarOpen] = useState(false);
+  const [isGeneratingChallenge, setIsGeneratingChallenge] = useState(false);
+  
+  const [isGeneratingNotes, setIsGeneratingNotes] = useState(false);
+  const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
+  const [notesContent, setNotesContent] = useState('');
+  const [selectedCourseForNotes, setSelectedCourseForNotes] = useState<ExternalCourse | null>(null);
 
-  // Load progress from localStorage
-  const [progress, setProgress] = useState<Record<string, Set<number>>>(() => {
-    const savedProgress = localStorage.getItem('course-progress');
-    if (savedProgress) {
-      try {
-        const parsed = JSON.parse(savedProgress);
-        const newProgress: Record<string, Set<number>> = {};
-        Object.keys(parsed).forEach(courseId => {
-          if (Array.isArray(parsed[courseId])) {
-            newProgress[courseId] = new Set(parsed[courseId]);
-          }
-        });
-        return newProgress;
-      } catch (e) { console.error("Failed to parse progress", e); return {}; }
-    }
-    return {};
-  });
+  const [isFullScreen, setIsFullScreen] = useState(!!document.fullscreenElement);
 
   const [points, setPoints] = useState<number>(() => {
     const savedPoints = localStorage.getItem('user-points');
     return savedPoints ? parseInt(savedPoints, 10) : 0;
   });
 
-  const [passedQuizzes, setPassedQuizzes] = useState<Set<string>>(() => {
-    const saved = localStorage.getItem('passed-quizzes');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return new Set<string>(parsed.filter((item): item is string => typeof item === 'string'));
-        }
-      } catch (e) { console.error("Failed to parse passed-quizzes", e); }
-    }
-    return new Set<string>();
+  const [completedCourses, setCompletedCourses] = useState<Set<string>>(() => {
+    const saved = localStorage.getItem('completed-courses');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
+  
+  const [solvedProblems, setSolvedProblems] = useState<Set<number>>(() => {
+    const saved = localStorage.getItem('solved-problems');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
   });
 
-  // Save progress to localStorage
-  useEffect(() => {
-    localStorage.setItem('course-progress', JSON.stringify(
-        Object.fromEntries(Object.entries(progress).map(([courseId, daySet]) => [courseId, Array.from(daySet)]))
-    ));
-  }, [progress]);
-  
   useEffect(() => { localStorage.setItem('user-points', points.toString()); }, [points]);
-  useEffect(() => { localStorage.setItem('passed-quizzes', JSON.stringify(Array.from(passedQuizzes))); }, [passedQuizzes]);
+  useEffect(() => {
+    localStorage.setItem('completed-courses', JSON.stringify(Array.from(completedCourses)));
+  }, [completedCourses]);
+  useEffect(() => {
+    localStorage.setItem('solved-problems', JSON.stringify(Array.from(solvedProblems)));
+  }, [solvedProblems]);
 
-  const activeCourse = useMemo(() => courses.find(c => c.id === activeCourseId), [activeCourseId]);
-  const activeCourseProgress = useMemo(() => progress[activeCourseId!] || new Set<number>(), [progress, activeCourseId]);
-  const isCourseComplete = useMemo(() => activeCourse ? activeCourseProgress.size === activeCourse.structure.length : false, [activeCourse, activeCourseProgress]);
-
-  const handleSelectCourse = useCallback((courseId: string) => {
-    setActiveCourseId(courseId);
-    setSelectedDay(1);
-    setActiveView(View.COURSE_CONTENT);
-  }, []);
-
-  const handleDaySelect = useCallback((day: number) => {
-    setSelectedDay(day);
-    setIsCourseSidebarOpen(false); // Close sidebar on mobile after selection
+  useEffect(() => {
+    const onFullScreenChange = () => {
+        setIsFullScreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', onFullScreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullScreenChange);
   }, []);
   
   const handleViewChange = useCallback((view: View) => {
-    setActiveCourseId(null);
     setActiveView(view);
   }, []);
-  
-  const handleSolveProblem = useCallback((problemId: number) => {
-    setSelectedProblemId(problemId);
-    setActiveView(View.CODING_SOLVER);
-  }, []);
 
-  const handleCompleteDay = useCallback((courseId: string, day: number) => {
-    if (!(progress[courseId] || new Set()).has(day)) {
-        setPoints(p => p + 10);
-    }
-    setProgress(prev => {
-        const newProgress = { ...prev };
-        const courseProgress = new Set(newProgress[courseId] || []);
-        courseProgress.add(day);
-        newProgress[courseId] = courseProgress;
-        return newProgress;
-    });
-  }, [progress]);
-  
-  const handleCompleteAll = useCallback(() => {
-    if (!activeCourse) return;
-    const allDayIds = activeCourse.structure.map(d => d.day);
-    setProgress(p => ({ ...p, [activeCourse.id]: new Set(allDayIds) }));
-  }, [activeCourse]);
-  
-  const handlePassQuiz = useCallback((courseId: string) => {
-    if (!passedQuizzes.has(courseId)) {
-        setPoints(p => p + 50);
-        setPassedQuizzes(prev => {
-            const newSet = new Set(prev); newSet.add(courseId); return newSet;
+  const handleToggleFullScreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+            alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
         });
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        }
     }
-  }, [passedQuizzes]);
-
-  const handleStartQuiz = useCallback(() => {
-    setActiveView(View.QUIZ);
-    setIsCourseSidebarOpen(false);
+  }, []);
+  
+  const handleSelectProblem = useCallback((problemId: number) => {
+    const problem = codingProblems.find(p => p.id === problemId);
+    if (problem) {
+      setActiveProblem(problem);
+      setActiveView(View.CODING_SOLVER);
+    }
   }, []);
 
-  const handleViewCertificate = useCallback((course: Course) => {
-    setCertificateCourse(course);
-    setIsProfileOpen(false);
-    setActiveView(View.CERTIFICATE);
+  const handleGenerateChallenge = useCallback(async (course: ExternalCourse) => {
+    setIsGeneratingChallenge(true);
+    try {
+      const newProblem = await generateCodingChallenge(course.title);
+      setActiveProblem(newProblem);
+      setActiveView(View.CODING_SOLVER);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to generate AI challenge. Please try again.");
+    } finally {
+      setIsGeneratingChallenge(false);
+    }
   }, []);
 
-  const renderMainContent = () => {
-    const currentCourseDay = activeCourse?.structure.find(d => d.day === selectedDay);
+  const handleGenerateNotes = useCallback(async (course: ExternalCourse) => {
+    setIsNotesModalOpen(true);
+    setIsGeneratingNotes(true);
+    setSelectedCourseForNotes(course);
+    setNotesContent(''); // Clear previous notes
+    try {
+      const notes = await generateCourseNotes(course.title, course.description);
+      setNotesContent(notes);
+    } catch (e) {
+      console.error(e);
+      setNotesContent("### Error\nFailed to generate notes. Please try again later.");
+    } finally {
+      setIsGeneratingNotes(false);
+    }
+  }, []);
 
-    switch(activeView) {
+  const handleCloseNotesModal = useCallback(() => {
+    setIsNotesModalOpen(false);
+    setSelectedCourseForNotes(null);
+    setNotesContent('');
+  }, []);
+
+
+  const handleCompleteCourse = useCallback((courseId: string) => {
+    if (completedCourses.has(courseId)) return;
+
+    setCompletedCourses(prev => {
+        const newSet = new Set(prev);
+        newSet.add(courseId);
+        return newSet;
+    });
+    setPoints(prev => prev + 100);
+  }, [completedCourses]);
+
+  const handleProblemSolved = useCallback((problemId: number, difficulty: 'Easy' | 'Medium' | 'Hard') => {
+    const isStaticProblem = codingProblems.some(p => p.id === problemId);
+    if (isStaticProblem && !solvedProblems.has(problemId)) {
+        setSolvedProblems(prev => {
+            const newSet = new Set(prev);
+            newSet.add(problemId);
+            return newSet;
+        });
+        const pointsAwarded = { 'Easy': 10, 'Medium': 25, 'Hard': 50 }[difficulty];
+        setPoints(prev => prev + pointsAwarded);
+    }
+    else if (!isStaticProblem) {
+        const pointsAwarded = { 'Easy': 10, 'Medium': 25, 'Hard': 50 }[difficulty];
+        setPoints(prev => prev + pointsAwarded);
+    }
+  }, [solvedProblems]);
+
+  const handleBackToProblems = useCallback(() => {
+    setActiveView(View.CODING_PRACTICE);
+    setActiveProblem(null);
+  }, []);
+
+  const completedCoursesDetails = useMemo(() => {
+    return allCompanyCourses.flatMap(company => company.courses).filter(course => completedCourses.has(course.id));
+  }, [completedCourses]);
+
+  const renderView = () => {
+    switch (activeView) {
       case View.DASHBOARD_HOME:
-        return <DashboardHome user={user} progressData={progress} points={points} />;
+        return <DashboardHome user={user} points={points} onViewChange={handleViewChange} />;
       case View.COURSE_SELECTION:
-        return <CourseSelectionView onSelectCourse={handleSelectCourse} progress={progress} />;
+        return <CourseSelectionView 
+            completedCourses={completedCourses} 
+            onCompleteCourse={handleCompleteCourse}
+            onGenerateChallenge={handleGenerateChallenge}
+            isGeneratingChallenge={isGeneratingChallenge}
+            onGenerateNotes={handleGenerateNotes}
+            isGeneratingNotes={isGeneratingNotes}
+            selectedCourseForNotes={selectedCourseForNotes}
+          />;
       case View.CODING_PRACTICE:
-        return <CodingPracticeView onSolve={handleSolveProblem} />;
+        return <CodingPracticeView onSolve={handleSelectProblem} solvedProblems={solvedProblems} />;
+      case View.CODING_SOLVER:
+        if (activeProblem) {
+          return <CodingSolverView problem={activeProblem} onBack={handleBackToProblems} onProblemSolved={handleProblemSolved} />;
+        }
+        return <CodingPracticeView onSolve={handleSelectProblem} solvedProblems={solvedProblems} />;
       case View.INTERVIEW_PRACTICE:
         return <InterviewPracticeView />;
       case View.APTITUDE_PRACTICE:
         return <AptitudePracticeView />;
       case View.INTERNSHIP:
-        return <InternshipView progressData={progress} />;
-      case View.CODING_SOLVER: {
-          const problem = codingProblems.find(p => p.id === selectedProblemId);
-          return problem ? <CodingSolverView problem={problem} onBack={() => setActiveView(View.CODING_PRACTICE)} /> : <div>Problem not found. Please go back.</div>;
-      }
-      case View.COURSE_CONTENT:
-        return activeCourse && currentCourseDay && (
-          <CourseView course={activeCourse} day={currentCourseDay} onComplete={handleCompleteDay} completedDays={activeCourseProgress} />
-        );
-      case View.QUIZ:
-        return activeCourse && (
-            <QuizView quiz={activeCourse.quiz} onPassQuiz={handlePassQuiz} courseId={activeCourse.id} hasPassedQuiz={passedQuizzes.has(activeCourse.id)} />
-        );
-      case View.CERTIFICATE:
-        return certificateCourse && <CertificateView user={user} course={certificateCourse} onBack={() => setActiveView(View.DASHBOARD_HOME)} />;
+        return <InternshipView />;
+      case View.AI_CHATBOT:
+        return <AiChatbotView />;
       default:
-        return <DashboardHome user={user} progressData={progress} points={points} />;
+        return <DashboardHome user={user} points={points} onViewChange={handleViewChange} />;
     }
-  }
-  
-  const isCourseViewActive = [View.COURSE_CONTENT, View.QUIZ].includes(activeView);
+  };
 
   return (
-    <>
-      <div className="flex h-screen bg-slate-900">
-        <MainSidebar activeView={activeView} setActiveView={handleViewChange} />
-        
-        {isCourseViewActive && activeCourse && (
-          <>
-            {isCourseSidebarOpen && (
-              <div className="fixed inset-0 bg-black/60 z-40 md:hidden" onClick={() => setIsCourseSidebarOpen(false)} aria-hidden="true"></div>
-            )}
-            <Sidebar
-              course={activeCourse}
-              selectedDay={selectedDay}
-              onDaySelect={handleDaySelect}
-              completedDays={activeCourseProgress}
-              onStartQuiz={handleStartQuiz}
-              isCourseComplete={isCourseComplete}
-              onCompleteAll={handleCompleteAll}
-              isOpen={isCourseSidebarOpen}
-              onClose={() => setIsCourseSidebarOpen(false)}
-            />
-          </>
-        )}
-
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <Header 
-            user={user} 
-            onLogout={onLogout} 
-            points={points}
-            onOpenProfile={() => setIsProfileOpen(true)}
-            onToggleSidebar={isCourseViewActive ? () => setIsCourseSidebarOpen(p => !p) : undefined}
-            isCourseViewActive={isCourseViewActive}
-          />
-          <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
-            {renderMainContent()}
-          </main>
-        </div>
+    <div className="flex h-screen bg-slate-900 text-slate-200 font-sans">
+      <MainSidebar activeView={activeView} setActiveView={handleViewChange} />
+      <div className="flex-1 flex flex-col min-w-0">
+        <Header 
+          user={user} 
+          onLogout={onLogout} 
+          points={points} 
+          onOpenProfile={() => setIsProfileOpen(true)}
+          isFullScreen={isFullScreen}
+          onToggleFullScreen={handleToggleFullScreen}
+        />
+        <main className="flex-1 overflow-y-auto p-6 md:p-8">
+          {renderView()}
+        </main>
       </div>
       <ProfileModal 
-        isOpen={isProfileOpen}
-        onClose={() => setIsProfileOpen(false)}
-        user={user}
-        progressData={progress}
-        points={points}
-        onViewCertificate={handleViewCertificate}
+        isOpen={isProfileOpen} 
+        onClose={() => setIsProfileOpen(false)} 
+        user={user} 
+        points={points} 
+        completedCourses={completedCoursesDetails}
       />
-    </>
+      <AiNotesModal
+        isOpen={isNotesModalOpen}
+        isLoading={isGeneratingNotes}
+        onClose={handleCloseNotesModal}
+        courseTitle={selectedCourseForNotes?.title || null}
+        notesContent={notesContent}
+      />
+    </div>
   );
 };
 
