@@ -44,8 +44,8 @@ const PremiumPlanView: React.FC<PremiumPlanProps> = ({ onSubscribe, user }) => {
             </ul>
           </div>
 
-          <p className="text-slate-300 text-lg">One-time payment for lifetime access to practice tools and your internship placement.</p>
-          <p className="text-5xl font-extrabold text-white my-4">₹499</p>
+          <p className="text-slate-300 text-lg">Get free access to all practice tools and your internship placement.</p>
+          <p className="text-5xl font-extrabold text-white my-4">Free</p>
 
           <button
             onClick={onSubscribe}

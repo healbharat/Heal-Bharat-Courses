@@ -197,3 +197,34 @@ export const generateCourseNotes = async (courseTitle: string, courseDescription
     return "### Error\n\nI was unable to generate notes for this course. The AI service may be temporarily unavailable. Please try again later.";
   }
 };
+
+/**
+ * Generates a summary and key learning points for a specific course section.
+ * @param sectionTitle The title of the course section.
+ * @param sectionDescription The description of the course section.
+ * @returns A promise that resolves to a markdown string with the notes.
+ */
+export const generateCourseSectionNotes = async (sectionTitle: string, sectionDescription: string): Promise<string> => {
+  try {
+    const systemInstruction = `You are an expert academic assistant. Your task is to generate concise and structured study notes for a given online course section.
+    The notes should be in Markdown format.
+    - Start with a brief, one-paragraph summary of the section's content.
+    - Follow with a bulleted list of "Key Concepts Covered" from this specific section. Use the format '* ' for bullet points.
+    - Keep the notes focused only on the provided section title and description.
+    - The tone should be helpful, clear, and encouraging.
+    - Do not include any preamble like "Here are your notes:". Start directly with the summary.`;
+
+    const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: `Generate notes for the course section titled "${sectionTitle}". Section Description: "${sectionDescription}"`,
+        config: {
+            systemInstruction: systemInstruction,
+        }
+    });
+
+    return response.text;
+  } catch (error)    {
+    console.error("Error generating course section notes from Gemini:", error);
+    return "### Error\n\nI was unable to generate notes for this section. The AI service may be temporarily unavailable. Please try again later.";
+  }
+};

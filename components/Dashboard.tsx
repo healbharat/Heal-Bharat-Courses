@@ -16,6 +16,9 @@ import { allCompanyCourses, ExternalCourse } from '../data/companyCourses';
 import AiChatbotView from './AiChatbotView';
 import { generateCodingChallenge, generateCourseNotes } from '../services/geminiService';
 import AiNotesModal from './AiNotesModal';
+import PythonCourseView from './PythonCourseView';
+import CertificateView from './CertificateView';
+import { pythonCourseData } from '../data/pythonCourse';
 
 
 interface DashboardProps {
@@ -51,6 +54,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
 
+  const [pythonCourseProgress, setPythonCourseProgress] = useState<Set<string>>(() => {
+    const saved = localStorage.getItem('python-course-progress');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
+
   useEffect(() => { localStorage.setItem('user-points', points.toString()); }, [points]);
   useEffect(() => {
     localStorage.setItem('completed-courses', JSON.stringify(Array.from(completedCourses)));
@@ -58,6 +66,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   useEffect(() => {
     localStorage.setItem('solved-problems', JSON.stringify(Array.from(solvedProblems)));
   }, [solvedProblems]);
+  useEffect(() => {
+    localStorage.setItem('python-course-progress', JSON.stringify(Array.from(pythonCourseProgress)));
+  }, [pythonCourseProgress]);
 
   useEffect(() => {
     const onFullScreenChange = () => {
@@ -66,10 +77,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     document.addEventListener('fullscreenchange', onFullScreenChange);
     return () => document.removeEventListener('fullscreenchange', onFullScreenChange);
   }, []);
+
+  const isPythonCourseCompleted = useMemo(() => {
+    return pythonCourseProgress.size >= pythonCourseData.length;
+  }, [pythonCourseProgress]);
   
   const handleViewChange = useCallback((view: View) => {
+    // Prevent access to certificate if course not completed
+    if (view === View.CERTIFICATE && !isPythonCourseCompleted) {
+      return;
+    }
     setActiveView(view);
-  }, []);
+  }, [isPythonCourseCompleted]);
 
   const handleToggleFullScreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -139,6 +158,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     setPoints(prev => prev + 100);
   }, [completedCourses]);
 
+  const handleCompleteAllCourses = useCallback(() => {
+    const allCourseIds = allCompanyCourses.flatMap(company => company.courses.map(course => course.id));
+    const newCompletedSet = new Set(allCourseIds);
+    
+    const newlyCompletedCount = allCourseIds.filter(id => !completedCourses.has(id)).length;
+    setPoints(prev => prev + newlyCompletedCount * 100);
+
+    setCompletedCourses(newCompletedSet);
+  }, [completedCourses]);
+
   const handleProblemSolved = useCallback((problemId: number, difficulty: 'Easy' | 'Medium' | 'Hard') => {
     const isStaticProblem = codingProblems.some(p => p.id === problemId);
     if (isStaticProblem && !solvedProblems.has(problemId)) {
@@ -155,6 +184,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         setPoints(prev => prev + pointsAwarded);
     }
   }, [solvedProblems]);
+
+  const handleCompletePythonSection = useCallback((sectionId: string) => {
+    if (pythonCourseProgress.has(sectionId)) return;
+
+    setPythonCourseProgress(prev => {
+      const newSet = new Set(prev);
+      newSet.add(sectionId);
+      return newSet;
+    });
+    setPoints(prev => prev + 50); // Award points for completing a section
+  }, [pythonCourseProgress]);
 
   const handleBackToProblems = useCallback(() => {
     setActiveView(View.CODING_PRACTICE);
@@ -178,6 +218,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             onGenerateNotes={handleGenerateNotes}
             isGeneratingNotes={isGeneratingNotes}
             selectedCourseForNotes={selectedCourseForNotes}
+            onCompleteAllCourses={handleCompleteAllCourses}
           />;
       case View.CODING_PRACTICE:
         return <CodingPracticeView onSolve={handleSelectProblem} solvedProblems={solvedProblems} />;
@@ -194,6 +235,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         return <InternshipView />;
       case View.AI_CHATBOT:
         return <AiChatbotView />;
+      case View.PYTHON_COURSE:
+        return <PythonCourseView completedSections={pythonCourseProgress} onCompleteSection={handleCompletePythonSection} />;
+      case View.CERTIFICATE:
+        return <CertificateView user={user} />;
       default:
         return <DashboardHome user={user} points={points} onViewChange={handleViewChange} />;
     }
@@ -201,7 +246,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   return (
     <div className="flex h-screen bg-slate-900 text-slate-200 font-sans">
-      <MainSidebar activeView={activeView} setActiveView={handleViewChange} />
+      <MainSidebar activeView={activeView} setActiveView={handleViewChange} isPythonCourseCompleted={isPythonCourseCompleted} />
       <div className="flex-1 flex flex-col min-w-0">
         <Header 
           user={user} 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { MicIcon } from './icons/MicIcon';
-import type { QuizQuestion } from '../types';
+import { CheckCircleIcon } from './icons/CheckCircleIcon';
+import { XCircleIcon } from './icons/XCircleIcon';
 
 // Mock data for the assessment
 const mcqQuestions = [
@@ -61,6 +62,50 @@ const CodeBlock: React.FC<{ code: string }> = ({ code }) => (
     </pre>
 );
 
+const TestResultsView: React.FC<{ score: number; total: number; onRestart: () => void; mcqAnswers: (string | null)[]; }> = ({ score, total, onRestart, mcqAnswers }) => {
+    const percentage = total > 0 ? Math.round((score / total) * 100) : 0;
+    return (
+        <div className="animate-fade-in p-8 flex-1 overflow-y-auto">
+            <div className="max-w-3xl mx-auto">
+                <header className="text-center">
+                    <h1 className="text-3xl md:text-4xl font-extrabold text-white">Assessment Complete!</h1>
+                    <div className="mt-8 bg-slate-800/50 p-8 rounded-xl border border-slate-700">
+                        <p className="text-2xl text-slate-300">Your MCQ Score:</p>
+                        <p className="text-6xl md:text-7xl font-bold text-teal-400 my-4">{percentage}%</p>
+                        <p className="text-xl text-slate-300">You answered {score} out of {total} questions correctly.</p>
+                    </div>
+                </header>
+
+                <div className="mt-8 text-left">
+                    <h3 className="text-xl font-bold text-white mb-4">MCQ Review:</h3>
+                    <ul className="space-y-2">
+                        {mcqQuestions.map((q, index) => {
+                            const userAnswer = mcqAnswers[index];
+                            const isCorrect = userAnswer === q.correctAnswer;
+                            return (
+                                <li key={index} className={`p-3 rounded-md flex items-start gap-3 ${isCorrect ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                                    {isCorrect ? <CheckCircleIcon className="w-5 h-5 text-green-400 mt-1 flex-shrink-0" /> : <XCircleIcon className="w-5 h-5 text-red-400 mt-1 flex-shrink-0" />}
+                                    <div>
+                                        <p className="font-semibold text-slate-200">{q.question}</p>
+                                        <p className="text-sm text-slate-400">Your answer: {userAnswer || 'Not Answered'}</p>
+                                        {!isCorrect && <p className="text-sm text-green-400">Correct answer: {q.correctAnswer}</p>}
+                                    </div>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </div>
+
+                <div className="text-center">
+                    <button onClick={onRestart} className="mt-8 bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-indigo-700 transition duration-300">
+                        Try Again
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const InterviewPracticeView: React.FC = () => {
   const [timeLeft, setTimeLeft] = useState(30 * 60); // 30 minutes in seconds
   const [activeTab, setActiveTab] = useState<'mcq' | 'prog1' | 'prog2'>('mcq');
@@ -68,14 +113,43 @@ const InterviewPracticeView: React.FC = () => {
   const [mcqAnswers, setMcqAnswers] = useState<(string | null)[]>(Array(mcqQuestions.length).fill(null));
   const [progCode1, setProgCode1] = useState(programmingProblem1.starterCode);
   const [progCode2, setProgCode2] = useState(programmingProblem2.starterCode);
+  const [isTestFinished, setIsTestFinished] = useState(false);
+  const [score, setScore] = useState(0);
+
+  const handleSubmitTest = useCallback(() => {
+    let finalScore = 0;
+    mcqAnswers.forEach((answer, index) => {
+        if (answer === mcqQuestions[index].correctAnswer) {
+            finalScore++;
+        }
+    });
+    setScore(finalScore);
+    setIsTestFinished(true);
+    setTimeLeft(0);
+  }, [mcqAnswers]);
 
   useEffect(() => {
-    if (timeLeft <= 0) return;
+    if (isTestFinished) return;
+    if (timeLeft <= 0) {
+        handleSubmitTest();
+        return;
+    };
     const timer = setInterval(() => {
       setTimeLeft(prevTime => prevTime - 1);
     }, 1000);
     return () => clearInterval(timer);
-  }, [timeLeft]);
+  }, [timeLeft, isTestFinished, handleSubmitTest]);
+  
+  const handleRestartTest = useCallback(() => {
+    setIsTestFinished(false);
+    setScore(0);
+    setTimeLeft(30 * 60);
+    setActiveTab('mcq');
+    setCurrentMcqIndex(0);
+    setMcqAnswers(Array(mcqQuestions.length).fill(null));
+    setProgCode1(programmingProblem1.starterCode);
+    setProgCode2(programmingProblem2.starterCode);
+  }, []);
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -155,68 +229,74 @@ const InterviewPracticeView: React.FC = () => {
 
   return (
     <div className="animate-fade-in flex flex-col h-full">
-      <header className="mb-8 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <MicIcon className="w-8 h-8 text-indigo-400" />
-          <h1 className="text-4xl font-extrabold text-white">Company Technical Assessment</h1>
-        </div>
-        <p className="text-slate-400 mt-2 text-lg">Practice with a real company's technical assessment format to prepare for your interviews.</p>
-      </header>
-
-      <div className="flex-1 bg-slate-800/50 border border-slate-700 rounded-xl flex flex-col">
-        {/* Top Bar */}
-        <div className="flex justify-between items-center p-3 border-b border-slate-700 bg-slate-800/60 rounded-t-xl">
-            <h2 className="text-lg font-bold text-white">Technical Assessment</h2>
-            <div className="flex items-center gap-4">
-                <span className="text-lg font-mono font-bold text-yellow-400 bg-yellow-500/10 px-3 py-1 rounded-md">{formatTime(timeLeft)}</span>
-                <button className="bg-red-600/80 text-white font-semibold text-sm py-2 px-4 rounded-lg hover:bg-red-700/80 transition">End Test</button>
-            </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 min-h-0">
-            {/* Left Panel */}
-            <div className="md:col-span-2 flex flex-col min-h-0">
-                <div className="flex-shrink-0 border-b border-slate-700">
-                     <button onClick={() => setActiveTab('mcq')} className={`px-4 py-3 font-semibold text-sm transition-colors ${activeTab === 'mcq' ? 'border-b-2 border-teal-400 text-white' : 'text-slate-400 hover:text-white'}`}>MCQ</button>
-                     <button onClick={() => setActiveTab('prog1')} className={`px-4 py-3 font-semibold text-sm transition-colors ${activeTab === 'prog1' ? 'border-b-2 border-teal-400 text-white' : 'text-slate-400 hover:text-white'}`}>Programming 1</button>
-                     <button onClick={() => setActiveTab('prog2')} className={`px-4 py-3 font-semibold text-sm transition-colors ${activeTab === 'prog2' ? 'border-b-2 border-teal-400 text-white' : 'text-slate-400 hover:text-white'}`}>Programming 2</button>
-                </div>
-                <div className="flex-1 overflow-y-auto p-6">
-                    {renderContent()}
-                </div>
-            </div>
-
-            {/* Right Panel */}
-            <div className="md:col-span-1 bg-slate-900/40 border-l border-slate-700 p-6 flex flex-col">
-                <h3 className="text-lg font-bold text-white mb-4">Question Palette</h3>
-                 <div className="grid grid-cols-4 gap-3">
-                    {mcqQuestions.map((_, index) => (
-                        <button 
-                            key={index} 
-                            onClick={() => { setActiveTab('mcq'); setCurrentMcqIndex(index); }}
-                            className={`w-12 h-12 flex items-center justify-center font-bold text-white rounded-full transition-transform hover:scale-110 ${mcqAnswers[index] ? 'bg-green-600' : 'bg-red-600'}`}>
-                            {index + 1}
-                        </button>
-                    ))}
-                </div>
-                 <div className="mt-auto space-y-2 text-sm">
-                    <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full bg-green-600"></div>
-                        <span className="text-slate-400">Answered</span>
+        {isTestFinished ? (
+            <TestResultsView score={score} total={mcqQuestions.length} onRestart={handleRestartTest} mcqAnswers={mcqAnswers} />
+        ) : (
+            <>
+                <header className="mb-8 flex-shrink-0">
+                    <div className="flex items-center gap-3">
+                    <MicIcon className="w-8 h-8 text-indigo-400" />
+                    <h1 className="text-4xl font-extrabold text-white">Company Technical Assessment</h1>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full bg-red-600"></div>
-                        <span className="text-slate-400">Not Answered</span>
+                    <p className="text-slate-400 mt-2 text-lg">Practice with a real company's technical assessment format to prepare for your interviews.</p>
+                </header>
+
+                <div className="flex-1 bg-slate-800/50 border border-slate-700 rounded-xl flex flex-col">
+                    {/* Top Bar */}
+                    <div className="flex justify-between items-center p-3 border-b border-slate-700 bg-slate-800/60 rounded-t-xl">
+                        <h2 className="text-lg font-bold text-white">Technical Assessment</h2>
+                        <div className="flex items-center gap-4">
+                            <span className="text-lg font-mono font-bold text-yellow-400 bg-yellow-500/10 px-3 py-1 rounded-md">{formatTime(timeLeft)}</span>
+                            <button onClick={handleSubmitTest} className="bg-red-600/80 text-white font-semibold text-sm py-2 px-4 rounded-lg hover:bg-red-700/80 transition">End Test</button>
+                        </div>
+                    </div>
+
+                    {/* Main Content */}
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-3 min-h-0">
+                        {/* Left Panel */}
+                        <div className="md:col-span-2 flex flex-col min-h-0">
+                            <div className="flex-shrink-0 border-b border-slate-700">
+                                <button onClick={() => setActiveTab('mcq')} className={`px-4 py-3 font-semibold text-sm transition-colors ${activeTab === 'mcq' ? 'border-b-2 border-teal-400 text-white' : 'text-slate-400 hover:text-white'}`}>MCQ</button>
+                                <button onClick={() => setActiveTab('prog1')} className={`px-4 py-3 font-semibold text-sm transition-colors ${activeTab === 'prog1' ? 'border-b-2 border-teal-400 text-white' : 'text-slate-400 hover:text-white'}`}>Programming 1</button>
+                                <button onClick={() => setActiveTab('prog2')} className={`px-4 py-3 font-semibold text-sm transition-colors ${activeTab === 'prog2' ? 'border-b-2 border-teal-400 text-white' : 'text-slate-400 hover:text-white'}`}>Programming 2</button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-6">
+                                {renderContent()}
+                            </div>
+                        </div>
+
+                        {/* Right Panel */}
+                        <div className="md:col-span-1 bg-slate-900/40 border-l border-slate-700 p-6 flex flex-col">
+                            <h3 className="text-lg font-bold text-white mb-4">Question Palette</h3>
+                            <div className="grid grid-cols-4 gap-3">
+                                {mcqQuestions.map((_, index) => (
+                                    <button 
+                                        key={index} 
+                                        onClick={() => { setActiveTab('mcq'); setCurrentMcqIndex(index); }}
+                                        className={`w-12 h-12 flex items-center justify-center font-bold text-white rounded-full transition-transform hover:scale-110 ${mcqAnswers[index] ? 'bg-green-600' : 'bg-red-600'}`}>
+                                        {index + 1}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="mt-auto space-y-2 text-sm">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 rounded-full bg-green-600"></div>
+                                    <span className="text-slate-400">Answered</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 rounded-full bg-red-600"></div>
+                                    <span className="text-slate-400">Not Answered</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {/* Bottom Bar */}
+                    <div className="flex justify-end p-3 border-t border-slate-700 bg-slate-800/60 rounded-b-xl">
+                        <button onClick={handleSubmitTest} className="bg-teal-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-teal-700 transition">Submit Test</button>
                     </div>
                 </div>
-            </div>
-        </div>
-         {/* Bottom Bar */}
-        <div className="flex justify-end p-3 border-t border-slate-700 bg-slate-800/60 rounded-b-xl">
-             <button className="bg-teal-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-teal-700 transition">Submit Test</button>
-        </div>
-      </div>
+            </>
+        )}
     </div>
   );
 };

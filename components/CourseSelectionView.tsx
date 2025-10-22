@@ -106,11 +106,12 @@ interface CourseSelectionViewProps {
   onGenerateNotes: (course: ExternalCourse) => void;
   isGeneratingNotes: boolean;
   selectedCourseForNotes: ExternalCourse | null;
+  onCompleteAllCourses: () => void;
 }
 
 const CourseSelectionView: React.FC<CourseSelectionViewProps> = ({ 
     completedCourses, onCompleteCourse, onGenerateChallenge, isGeneratingChallenge,
-    onGenerateNotes, isGeneratingNotes, selectedCourseForNotes 
+    onGenerateNotes, isGeneratingNotes, selectedCourseForNotes, onCompleteAllCourses 
 }) => {
   const [activeTab, setActiveTab] = useState(allCompanyCourses[0]?.id || '');
   const [searchTerm, setSearchTerm] = useState('');
@@ -127,8 +128,20 @@ const CourseSelectionView: React.FC<CourseSelectionViewProps> = ({
   return (
     <div className="animate-fade-in">
       <header className="mb-10">
-        <h1 className="text-4xl font-extrabold text-white">Company-Wise Courses</h1>
-        <p className="text-slate-400 mt-2 max-w-2xl">Explore curated learning paths from our industry partners, and generate custom AI coding challenges to test your skills.</p>
+        <div className="flex items-start justify-between gap-4">
+            <div>
+                <h1 className="text-4xl font-extrabold text-white">Company-Wise Courses</h1>
+                <p className="text-slate-400 mt-2 max-w-2xl">Explore curated learning paths from our industry partners, and generate custom AI coding challenges to test your skills.</p>
+            </div>
+            <button
+                onClick={onCompleteAllCourses}
+                className="inline-flex items-center gap-2 bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition duration-300 whitespace-nowrap"
+                title="Mark all courses as complete"
+            >
+                <CheckCircleIcon className="w-5 h-5" />
+                Complete All
+            </button>
+        </div>
       </header>
       
       <div className="flex border-b border-slate-700 mb-6">

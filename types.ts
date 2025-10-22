@@ -11,6 +11,23 @@ export interface QuizQuestion {
   correctAnswer: string;
 }
 
+export interface CourseSectionQuizQuestion {
+  question: string;
+  options: string[];
+  correctAnswerIndex: number;
+  explanation: string;
+}
+
+export interface CourseSection {
+  id: string;
+  title: string;
+  duration: string;
+  youtubeId: string;
+  description: string;
+  quiz: CourseSectionQuizQuestion[];
+}
+
+
 // A single coding problem for practice
 export interface CodingProblem {
   id: number;
@@ -47,4 +64,8 @@ export enum View {
   
   // Sub-view for the coding solver
   CODING_SOLVER,
+
+  // Heal Bharat Course
+  PYTHON_COURSE,
+  CERTIFICATE,
 }
