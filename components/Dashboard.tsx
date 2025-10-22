@@ -38,6 +38,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [selectedCourseForNotes, setSelectedCourseForNotes] = useState<ExternalCourse | null>(null);
 
   const [isFullScreen, setIsFullScreen] = useState(!!document.fullscreenElement);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const [points, setPoints] = useState<number>(() => {
     const savedPoints = localStorage.getItem('user-points');
@@ -81,6 +82,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const isPythonCourseCompleted = useMemo(() => {
     return pythonCourseProgress.size >= pythonCourseData.length;
   }, [pythonCourseProgress]);
+
+  const toggleSidebar = useCallback(() => {
+    setIsSidebarOpen(prev => !prev);
+  }, []);
   
   const handleViewChange = useCallback((view: View) => {
     // Prevent access to certificate if course not completed
@@ -88,6 +93,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       return;
     }
     setActiveView(view);
+    setIsSidebarOpen(false); // Close sidebar on mobile after navigation
   }, [isPythonCourseCompleted]);
 
   const handleToggleFullScreen = useCallback(() => {
@@ -246,7 +252,19 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   return (
     <div className="flex h-screen bg-slate-900 text-slate-200 font-sans">
-      <MainSidebar activeView={activeView} setActiveView={handleViewChange} isPythonCourseCompleted={isPythonCourseCompleted} />
+      <MainSidebar 
+        activeView={activeView} 
+        setActiveView={handleViewChange} 
+        isPythonCourseCompleted={isPythonCourseCompleted}
+        isOpen={isSidebarOpen}
+      />
+       {isSidebarOpen && (
+        <div 
+            className="fixed inset-0 bg-black/60 z-20 md:hidden"
+            onClick={toggleSidebar}
+            aria-hidden="true"
+        />
+       )}
       <div className="flex-1 flex flex-col min-w-0">
         <Header 
           user={user} 
@@ -255,6 +273,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           onOpenProfile={() => setIsProfileOpen(true)}
           isFullScreen={isFullScreen}
           onToggleFullScreen={handleToggleFullScreen}
+          onToggleSidebar={toggleSidebar}
         />
         <main className="flex-1 overflow-y-auto p-6 md:p-8">
           {renderView()}

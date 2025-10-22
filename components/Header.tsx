@@ -14,14 +14,21 @@ interface HeaderProps {
   onOpenProfile: () => void;
   isFullScreen: boolean;
   onToggleFullScreen: () => void;
+  onToggleSidebar: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ user, onLogout, points, onOpenProfile, isFullScreen, onToggleFullScreen }) => {
+const Header: React.FC<HeaderProps> = ({ user, onLogout, points, onOpenProfile, isFullScreen, onToggleFullScreen, onToggleSidebar }) => {
   return (
     <header className="bg-slate-800/50 backdrop-blur-sm border-b border-slate-700 p-3 sm:p-4 flex justify-between items-center flex-shrink-0 z-10">
       <div className="flex items-center gap-2 md:gap-4">
-        {/* Placeholder for potential mobile sidebar toggle in the future */}
-        <h1 className="text-lg md:text-xl font-bold text-white hidden sm:block">{`Welcome, ${user.name}!`}</h1>
+        <button 
+          onClick={onToggleSidebar} 
+          className="p-1 text-slate-300 hover:text-white md:hidden"
+          aria-label="Open sidebar"
+        >
+          <MenuIcon className="w-6 h-6" />
+        </button>
+        <h1 className="text-lg md:text-xl font-bold text-white hidden md:block">{`Welcome, ${user.name}!`}</h1>
       </div>
       <div className="flex items-center gap-2 sm:gap-4">
         <div className="flex items-center gap-2 bg-slate-700/50 text-amber-400 font-bold py-2 px-3 sm:px-4 rounded-lg">

@@ -13,6 +13,7 @@ import { QuizIcon } from './icons/QuizIcon';
 import { CodeIcon } from './icons/CodeIcon';
 import { TerminalIcon } from './icons/TerminalIcon';
 import { CertificateIcon } from './icons/CertificateIcon';
+import { CopyIcon } from './icons/CopyIcon';
 
 interface PythonCourseViewProps {
   completedSections: Set<string>;
@@ -103,6 +104,53 @@ const FeatureCard: React.FC<{ icon: React.FC<any>, title: string, description: s
         </div>
     </div>
 );
+
+const PracticeTerminal: React.FC<{ code: string; output: string }> = ({ code, output }) => {
+    const [isCopied, setIsCopied] = useState(false);
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(code).then(() => {
+            setIsCopied(true);
+            setTimeout(() => setIsCopied(false), 2000);
+        }).catch(err => {
+            console.error('Failed to copy code: ', err);
+        });
+    };
+    
+    return (
+        <div className="my-6">
+            <h3 className="text-xl font-bold text-white mb-2">Practice Terminal</h3>
+            <div className="bg-slate-900/70 rounded-lg border border-slate-700 overflow-hidden">
+                <div className="bg-slate-800 px-4 py-2 flex items-center gap-2 border-b border-slate-700">
+                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <span className="text-xs text-slate-400 ml-auto font-mono">bash</span>
+                </div>
+                <div className="p-4 font-mono text-sm">
+                    <div className="relative">
+                        <div className="flex gap-2">
+                            <span className="text-green-400">$</span>
+                            <pre className="text-slate-300 whitespace-pre-wrap pr-12">{code}</pre>
+                        </div>
+                        <button
+                            onClick={handleCopy}
+                            className="absolute top-0 right-0 p-1.5 bg-slate-700 text-slate-300 rounded-md hover:bg-slate-600 hover:text-white transition-colors duration-200"
+                            aria-label="Copy code"
+                            title="Copy code"
+                        >
+                            {isCopied ? <CheckCircleIcon className="w-4 h-4 text-green-400" /> : <CopyIcon className="w-4 h-4" />}
+                        </button>
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                        <span className="text-teal-400">{'>'}</span>
+                        <pre className="text-slate-200 whitespace-pre-wrap">{output}</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 
 const PythonCourseView: React.FC<PythonCourseViewProps> = ({ completedSections, onCompleteSection }) => {
@@ -238,6 +286,10 @@ const PythonCourseView: React.FC<PythonCourseViewProps> = ({ completedSections, 
             </button>
           </div>
           
+          {activeSection.practice && !completedSections.has(activeSectionId) && (
+            <PracticeTerminal code={activeSection.practice.code} output={activeSection.practice.output} />
+          )}
+
           {!completedSections.has(activeSectionId) && (
              <QuizComponent section={activeSection} onQuizComplete={() => onCompleteSection(activeSection.id)} />
           )}

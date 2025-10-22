@@ -7,6 +7,10 @@ export const pythonCourseData: CourseSection[] = [
     duration: '45 Mins',
     youtubeId: 'kqtD5dpn9C8', // Python for Beginners - Full Course
     description: 'Start your journey with the basics of Python. This section covers fundamental concepts like variables, data types, and basic operators. You will also write your very first Python program.',
+    practice: {
+      code: 'name = "Alice"\nprint(f"Hello, {name}!")',
+      output: 'Hello, Alice!'
+    },
     quiz: [
       {
         question: 'What is the correct way to declare a variable in Python?',
@@ -28,6 +32,10 @@ export const pythonCourseData: CourseSection[] = [
     duration: '1 Hour',
     youtubeId: 'R-HLU9A50aA', // Python Data Structures
     description: 'Dive into the core data structures that Python offers: Lists, Tuples, Dictionaries, and Sets. Understand their differences, use-cases, and common methods.',
+    practice: {
+      code: 'fruits = ["apple", "banana", "cherry"]\nprint(fruits[1])',
+      output: 'banana'
+    },
     quiz: [
       {
         question: 'Which method is used to add an element to the end of a list?',
@@ -49,6 +57,10 @@ export const pythonCourseData: CourseSection[] = [
     duration: '35 Mins',
     youtubeId: '9OpiYIeG6HY', // Python Functions
     description: 'Learn how to control the flow of your programs using conditional statements (if, elif, else) and loops (for, while). You will also learn to write your own functions to create reusable and organized code.',
+    practice: {
+      code: 'def greet(name):\n    return f"Hi, {name}"\n\nprint(greet("Bob"))',
+      output: 'Hi, Bob'
+    },
     quiz: [
       {
         question: 'What keyword is used to define a function in Python?',
@@ -70,6 +82,10 @@ export const pythonCourseData: CourseSection[] = [
     duration: '30 Mins',
     youtubeId: 'QUT1VHiLmmI', // NumPy Tutorial
     description: 'Enter the world of scientific computing with NumPy. Learn about the powerful N-dimensional array object, and how to perform efficient numerical operations.',
+    practice: {
+      code: 'import numpy as np\n\narr = np.array([1, 2, 3])\nprint(arr * 2)',
+      output: '[2 4 6]'
+    },
     quiz: [
       {
         question: 'What is the primary data structure in NumPy?',
@@ -91,6 +107,10 @@ export const pythonCourseData: CourseSection[] = [
     duration: '1 Hour 15 Mins',
     youtubeId: 'vmEHCJofslg', // Pandas Tutorial
     description: 'Pandas is the most popular library for data analysis in Python. Get introduced to its two main data structures, Series and DataFrame, and learn how to read, write, and manipulate data.',
+    practice: {
+      code: 'import pandas as pd\n\ndata = {\'age\': [25, 30, 22]}\ns = pd.Series(data[\'age\'])\nprint(s.mean())',
+      output: '25.666666666666668'
+    },
     quiz: [
       {
         question: 'What is the primary data structure for tabular data in Pandas?',
@@ -112,6 +132,10 @@ export const pythonCourseData: CourseSection[] = [
     duration: '25 Mins',
     youtubeId: '0B5eIE_1a_M', // Scikit-Learn Course
     description: 'Take your first steps into Artificial Intelligence and Machine Learning with Scikit-Learn. Understand the basic concepts of training a model and make your first prediction.',
+    practice: {
+      code: 'from sklearn.linear_model import LinearRegression\n\n# Create a model instance\nmodel = LinearRegression()\nprint(model)',
+      output: 'LinearRegression()'
+    },
     quiz: [
       {
         question: 'In Scikit-learn, what method is used to train a machine learning model?',

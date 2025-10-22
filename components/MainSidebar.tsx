@@ -44,9 +44,10 @@ interface MainSidebarProps {
   activeView: View;
   setActiveView: (view: View) => void;
   isPythonCourseCompleted: boolean;
+  isOpen: boolean;
 }
 
-const MainSidebar: React.FC<MainSidebarProps> = ({ activeView, setActiveView, isPythonCourseCompleted }) => {
+const MainSidebar: React.FC<MainSidebarProps> = ({ activeView, setActiveView, isPythonCourseCompleted, isOpen }) => {
   const navItems = [
     { view: View.DASHBOARD_HOME, label: 'Dashboard', icon: DashboardIcon },
     { view: View.COURSE_SELECTION, label: 'Courses', icon: BookOpenIcon },
@@ -66,7 +67,7 @@ const MainSidebar: React.FC<MainSidebarProps> = ({ activeView, setActiveView, is
   ];
 
   return (
-    <aside className="w-64 bg-slate-800 p-4 flex-shrink-0 flex flex-col border-r border-slate-700 hidden md:flex">
+    <aside className={`w-64 bg-slate-800 p-4 flex-shrink-0 flex flex-col border-r border-slate-700 fixed inset-y-0 left-0 z-30 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
       <div className="flex items-center gap-3 mb-8 px-2">
         <CodeIcon className="w-8 h-8 text-teal-400" />
         <h1 className="text-xl font-bold text-white">Heal Bharat</h1>

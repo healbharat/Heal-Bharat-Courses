@@ -25,6 +25,10 @@ export interface CourseSection {
   youtubeId: string;
   description: string;
   quiz: CourseSectionQuizQuestion[];
+  practice?: {
+    code: string;
+    output: string;
+  };
 }
 
 

@@ -3,9 +3,11 @@ import Dashboard from './components/Dashboard';
 import Login from './components/Login';
 import PremiumPlanView from './components/PremiumPlanView';
 import type { User } from './types';
+import ScreenshotBlocker from './components/ScreenshotBlocker';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [isBlocking, setIsBlocking] = useState(false);
 
   useEffect(() => {
     // Check for a logged-in user in localStorage on initial load
@@ -26,6 +28,29 @@ const App: React.FC = () => {
         handleLogout();
       }
     }
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+        // This is a best-effort approach. Many screenshot tools use different keys.
+        if (e.key === 'PrintScreen') {
+            e.preventDefault();
+            setIsBlocking(true);
+        }
+    };
+    
+    const handleCopy = (e: ClipboardEvent) => {
+        e.preventDefault();
+        setIsBlocking(true);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('copy', handleCopy);
+
+    return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+        document.removeEventListener('copy', handleCopy);
+    };
   }, []);
 
   const handleLogin = useCallback((loggedInUser: User) => {
@@ -66,6 +91,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-900 font-sans">
+      {isBlocking && <ScreenshotBlocker onClose={() => setIsBlocking(false)} />}
       {renderContent()}
     </div>
   );
