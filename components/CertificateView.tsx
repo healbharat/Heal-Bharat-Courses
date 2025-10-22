@@ -37,7 +37,7 @@ const CertificateView: React.FC<CertificateViewProps> = ({ user }) => {
   };
   
   const handleShare = () => {
-      const text = `I'm excited to share that I've completed the "Python with AI & Data Science" course on the AI Learning Platform! #Python #AI #DataScience #HealBharat #Learning`;
+      const text = `I'm excited to share that I've completed the "Python with AI & Data Science" course on the Heal Bharat Learning Platform! #Python #AI #DataScience #HealBharat #Learning`;
       const url = `https://www.linkedin.com/sharing/share-offsite/?summary=${encodeURIComponent(text)}`;
       window.open(url, '_blank', 'noopener,noreferrer');
   }
@@ -73,7 +73,7 @@ const CertificateView: React.FC<CertificateViewProps> = ({ user }) => {
                         </div>
                         <SealIcon className="w-24 h-24 text-teal-500" />
                         <div>
-                            <p className="text-xl font-bold text-white">AI Platform</p>
+                            <p className="text-xl font-bold text-white">Heal Bharat</p>
                              <p className="text-sm text-slate-400 border-t border-slate-600 mt-1 pt-1">Authorized</p>
                         </div>
                     </div>

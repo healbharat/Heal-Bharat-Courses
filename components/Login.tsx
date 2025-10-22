@@ -64,16 +64,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <div className="mx-auto mb-6 bg-slate-700 w-20 h-20 rounded-full flex items-center justify-center">
              <CodeIcon className="w-12 h-12 text-teal-400" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">AI Learning Platform</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">Heal Bharat Learning Platform</h1>
           <p className="text-slate-400 mb-6">{isLoginView ? 'Welcome back! Please log in.' : 'Create your account to begin.'}</p>
           
-          <div className="bg-blue-500/10 border border-blue-500/20 text-blue-300 text-sm py-3 px-4 rounded-md mb-6 flex items-start gap-3 text-left">
-            <InfoIcon className="w-5 h-5 mt-0.5 flex-shrink-0" />
-            <p>
-              <strong>Note:</strong> This is a demo portal. Data is saved in your browser's local storage and may be cleared. Login issues can occur.
-            </p>
-          </div>
-
           {error && <p className="bg-red-500/20 text-red-400 text-sm py-2 px-4 rounded-md mb-4">{error}</p>}
           
           <form onSubmit={handleSubmit} className="space-y-4 text-left">

@@ -5,6 +5,7 @@ import { LaptopCodeIcon } from './icons/LaptopCodeIcon';
 import { MicIcon } from './icons/MicIcon';
 import { BrainIcon } from './icons/BrainIcon';
 import { BriefcaseIcon } from './icons/BriefcaseIcon';
+import { InfoIcon } from './icons/InfoIcon';
 
 interface PremiumPlanProps {
   onSubscribe: () => void;
@@ -31,6 +32,13 @@ const PremiumPlanView: React.FC<PremiumPlanProps> = ({ onSubscribe, user }) => {
           <p className="text-slate-400 mb-8">
             Welcome, {user.name}! Take the next step with our Internship Kickstarter Plan.
           </p>
+
+          <div className="bg-amber-500/10 border border-amber-500/20 text-amber-300 text-sm py-3 px-4 rounded-md mb-8 flex items-start gap-3 text-left">
+            <InfoIcon className="w-5 h-5 mt-0.5 flex-shrink-0" />
+            <p>
+              <strong>Important Note:</strong> We are currently experiencing data persistence issues. For the 'Heal Bharat Course', we recommend completing it in a single session to ensure your progress is saved. Our team is working to resolve this soon. We appreciate your cooperation!
+            </p>
+          </div>
           
           <div className="bg-slate-900/50 p-6 rounded-lg border border-slate-700 text-left mb-8">
             <h2 className="text-lg font-semibold text-white mb-4">Plan Benefits:</h2>

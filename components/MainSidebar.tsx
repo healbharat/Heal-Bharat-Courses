@@ -69,7 +69,7 @@ const MainSidebar: React.FC<MainSidebarProps> = ({ activeView, setActiveView, is
     <aside className="w-64 bg-slate-800 p-4 flex-shrink-0 flex flex-col border-r border-slate-700 hidden md:flex">
       <div className="flex items-center gap-3 mb-8 px-2">
         <CodeIcon className="w-8 h-8 text-teal-400" />
-        <h1 className="text-xl font-bold text-white">AI Platform</h1>
+        <h1 className="text-xl font-bold text-white">Heal Bharat</h1>
       </div>
 
       <nav className="flex-1 overflow-y-auto">
